@@ -21,15 +21,23 @@ import android.view.ViewGroup;
 
 import com.example.javaappfirst.adapters.ShopProductAdapter;
 import com.example.javaappfirst.database.Product;
+import com.example.javaappfirst.network.ApiClient;
+import com.example.javaappfirst.network.ApiInterface;
+import com.example.javaappfirst.network.ProductResponse;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ShopFragment extends Fragment implements View.OnClickListener {
 
     private ShopViewModel mViewModel;
     private NavController navController;
     private FloatingActionButton fabCart, fabSetDb;
+    private ApiInterface apiInterface;
 
     public static ShopFragment newInstance() {
         return new ShopFragment();
@@ -52,6 +60,7 @@ public class ShopFragment extends Fragment implements View.OnClickListener {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mViewModel = new ViewModelProvider(this).get(ShopViewModel.class);
+        apiInterface = ApiClient.getClient().create(ApiInterface.class);
         navController = Navigation.findNavController(view);
         fabCart = view.findViewById(R.id.fab_cart);
         fabCart.setOnClickListener(this);
@@ -78,7 +87,22 @@ public class ShopFragment extends Fragment implements View.OnClickListener {
                 navController.navigate(R.id.action_shopFragment_to_cartFragment);
                 break;
             case R.id.fab_set_db:
-                mViewModel.insert(new Product(1,"2","Mysza", 22.20f, "Kox mysz", 1));
+                Call<ProductResponse> call = apiInterface.getCurrentProductsData();
+                call.enqueue(new Callback<ProductResponse>() {
+                    @Override
+                    public void onResponse(Call<ProductResponse> call, Response<ProductResponse> response) {
+                        if(response.isSuccessful() && response.body() != null){
+                            for(Product product : response.body().products){
+                                mViewModel.insertOrUpdate(product);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ProductResponse> call, Throwable t) {
+
+                    }
+                });
                 break;
         }
     }
